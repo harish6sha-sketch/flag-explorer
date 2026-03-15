@@ -21,6 +21,19 @@ const QUIZ_FLAGS = [
   { name: "Singapore", code: "sg", continent: "Asia", colors: ["Red", "White"] },
 ];
 
+function speak(text) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.1;
+  utterance.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+    voices.find(v => v.lang.startsWith('en'));
+  if (englishVoice) utterance.voice = englishVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -101,6 +114,12 @@ export default function NainishhaQuiz({ setScore }) {
       };
     });
 
+    if (isCorrect) {
+      speak(`${question.answer.name}. Well done Nainishha, it is the right answer!`);
+    } else {
+      speak(`It was ${question.answer.name}. Well try Nainishha, try again!`);
+    }
+
     setAnimation(isCorrect ? 'correct-bounce' : 'wrong-shake');
 
     timerRef.current = setTimeout(() => {
@@ -109,10 +128,11 @@ export default function NainishhaQuiz({ setScore }) {
       } else {
         nextQuestion();
       }
-    }, 2200);
+    }, 3500);
   };
 
   const resetQuiz = () => {
+    window.speechSynthesis.cancel();
     clearTimeout(timerRef.current);
     setMode(null);
     setQuestion(null);
