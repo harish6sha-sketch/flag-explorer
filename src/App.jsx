@@ -3,6 +3,7 @@ import Home from './components/Home';
 import Learn from './components/Learn';
 import Quiz from './components/Quiz';
 import SimilarFlags from './components/SimilarFlags';
+import NainishhaQuiz from './components/NainishhaQuiz';
 import FlagDetail from './components/FlagDetail';
 
 function App() {
@@ -39,6 +40,9 @@ function App() {
             <button className={page === 'similar' ? 'active' : ''} onClick={() => navigate('similar')}>
               🔀 Similar
             </button>
+            <button className={page === 'nainishha-quiz' ? 'active' : ''} onClick={() => navigate('nainishha-quiz')}>
+              🌟 Nainishha
+            </button>
           </div>
           <div className="nav-score">
             ⭐ {score.stars} | 🔥 {score.streak}
@@ -56,6 +60,9 @@ function App() {
         )}
         {page === 'similar' && (
           <SimilarFlags onSelectFlag={setSelectedFlag} />
+        )}
+        {page === 'nainishha-quiz' && (
+          <NainishhaQuiz setScore={setScore} />
         )}
       </main>
 

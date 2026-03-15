@@ -89,6 +89,13 @@ export default function Home({ onNavigate, score }) {
               <small>Spot the difference</small>
             </span>
           </button>
+          <button className="home-btn nainishha-btn" onClick={() => onNavigate('nainishha-quiz')}>
+            <span className="btn-icon">🌟</span>
+            <span className="btn-text">
+              <strong>Nainishha's Quiz</strong>
+              <small>Special flag challenge</small>
+            </span>
+          </button>
         </div>
       </div>
     </div>
