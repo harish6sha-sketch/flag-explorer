@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { getFlagUrl } from '../data/flags';
 
 const QUIZ_FLAGS = [
@@ -41,29 +41,31 @@ const QUIZ_FLAGS = [
   { name: "South Africa", code: "za", continent: "Africa", colors: ["Green", "Yellow", "Black", "White", "Red", "Blue"] },
 ];
 
+function getVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+    voices.find(v => v.lang.startsWith('en'));
+}
+
 function speak(text) {
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 0.9;
   utterance.pitch = 1.1;
   utterance.volume = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
-    voices.find(v => v.lang.startsWith('en'));
-  if (englishVoice) utterance.voice = englishVoice;
+  const voice = getVoice();
+  if (voice) utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
 }
 
-function speakOption(text) {
+function speakOptionOnly(text) {
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 1;
   utterance.pitch = 1;
   utterance.volume = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
-    voices.find(v => v.lang.startsWith('en'));
-  if (englishVoice) utterance.voice = englishVoice;
+  const voice = getVoice();
+  if (voice) utterance.voice = voice;
   window.speechSynthesis.speak(utterance);
 }
 
@@ -99,7 +101,10 @@ export default function NainishhaQuiz({ setScore }) {
   const [sessionScore, setSessionScore] = useState({ correct: 0, total: 0 });
   const [showSummary, setShowSummary] = useState(false);
   const [animation, setAnimation] = useState('');
+  const [hoveredIdx, setHoveredIdx] = useState(-1);
+  const [hoverEnabled, setHoverEnabled] = useState(false);
   const timerRef = useRef(null);
+  const hoverTimerRef = useRef(null);
 
   const TOTAL_QUESTIONS = 10;
 
@@ -109,6 +114,13 @@ export default function NainishhaQuiz({ setScore }) {
     } else {
       speak(`Nainishha, which flag belongs to ${q.answer.name}?`);
     }
+  };
+
+  const enableHoverAfterDelay = () => {
+    setHoverEnabled(false);
+    setHoveredIdx(-1);
+    clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setHoverEnabled(true), 2500);
   };
 
   const nextQuestion = useCallback(() => {
@@ -123,6 +135,7 @@ export default function NainishhaQuiz({ setScore }) {
     setQuestion(q);
     setQuestionNum((n) => n + 1);
     speakQuestion(q);
+    enableHoverAfterDelay();
     setTimeout(() => setAnimation(''), 400);
   }, [mode, questionNum]);
 
@@ -132,13 +145,51 @@ export default function NainishhaQuiz({ setScore }) {
     setQuestionNum(1);
     setAnimation('slide-in');
     speakQuestion(q);
+    enableHoverAfterDelay();
     setTimeout(() => setAnimation(''), 400);
   }, []);
+
+  const handleOptionHover = (opt, idx) => {
+    if (showResult || !hoverEnabled) return;
+    setHoveredIdx(idx);
+    speakOptionOnly(opt.name);
+  };
+
+  const handleOptionTouch = (opt, idx) => {
+    if (showResult) return;
+    setHoveredIdx(idx);
+    speakOptionOnly(opt.name);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!question || showResult) return;
+    const handleKey = (e) => {
+      const opts = question.options;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = hoveredIdx < opts.length - 1 ? hoveredIdx + 1 : 0;
+        setHoveredIdx(next);
+        speakOptionOnly(opts[next].name);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = hoveredIdx > 0 ? hoveredIdx - 1 : opts.length - 1;
+        setHoveredIdx(prev);
+        speakOptionOnly(opts[prev].name);
+      } else if (e.key === 'Enter' && hoveredIdx >= 0) {
+        e.preventDefault();
+        handleAnswer(opts[hoveredIdx]);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [question, showResult, hoveredIdx]);
 
   const handleAnswer = (option) => {
     if (showResult) return;
     setSelected(option);
     setShowResult(true);
+    setHoverEnabled(false);
 
     const isCorrect = option.code === question.answer.code;
 
@@ -179,6 +230,7 @@ export default function NainishhaQuiz({ setScore }) {
   const resetQuiz = () => {
     window.speechSynthesis.cancel();
     clearTimeout(timerRef.current);
+    clearTimeout(hoverTimerRef.current);
     setMode(null);
     setQuestion(null);
     setSelected(null);
@@ -187,15 +239,19 @@ export default function NainishhaQuiz({ setScore }) {
     setSessionScore({ correct: 0, total: 0 });
     setShowSummary(false);
     setAnimation('');
+    setHoveredIdx(-1);
+    setHoverEnabled(false);
   };
 
   const isCorrect = (option) => option.code === question?.answer?.code;
 
-  const getOptionClass = (option) => {
-    if (!showResult) return '';
-    if (isCorrect(option)) return 'correct';
-    if (selected && option.code === selected.code && !isCorrect(option)) return 'wrong';
-    return 'dimmed';
+  const getOptionClass = (option, idx) => {
+    let cls = '';
+    if (idx === hoveredIdx && !showResult) cls += ' hovered';
+    if (!showResult) return cls;
+    if (isCorrect(option)) return cls + ' correct';
+    if (selected && option.code === selected.code && !isCorrect(option)) return cls + ' wrong';
+    return cls + ' dimmed';
   };
 
   // Mode selection
@@ -289,12 +345,14 @@ export default function NainishhaQuiz({ setScore }) {
               <img src={getFlagUrl(question.answer.code)} alt="Mystery flag" />
             </div>
             <div className="quiz-options">
-              {question.options.map((opt) => (
+              {question.options.map((opt, idx) => (
                 <button
                   key={opt.code}
-                  className={`quiz-option text-option ${getOptionClass(opt)}`}
+                  className={`quiz-option text-option ${getOptionClass(opt, idx)}`}
                   onClick={() => handleAnswer(opt)}
-                  onMouseEnter={() => !showResult && speakOption(opt.name)}
+                  onMouseEnter={() => handleOptionHover(opt, idx)}
+                  onMouseLeave={() => setHoveredIdx(-1)}
+                  onTouchStart={() => handleOptionTouch(opt, idx)}
                   disabled={showResult}
                 >
                   {opt.name}
@@ -311,12 +369,14 @@ export default function NainishhaQuiz({ setScore }) {
           <>
             <h3>Which flag belongs to <strong>{question.answer.name}</strong>?</h3>
             <div className="quiz-options flag-options">
-              {question.options.map((opt) => (
+              {question.options.map((opt, idx) => (
                 <button
                   key={opt.code}
-                  className={`quiz-option flag-option ${getOptionClass(opt)}`}
+                  className={`quiz-option flag-option ${getOptionClass(opt, idx)}`}
                   onClick={() => handleAnswer(opt)}
-                  onMouseEnter={() => !showResult && speakOption(opt.name)}
+                  onMouseEnter={() => handleOptionHover(opt, idx)}
+                  onMouseLeave={() => setHoveredIdx(-1)}
+                  onTouchStart={() => handleOptionTouch(opt, idx)}
                   disabled={showResult}
                 >
                   <img src={getFlagUrl(opt.code, 160)} alt="Option" />

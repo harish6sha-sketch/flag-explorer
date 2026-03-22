@@ -652,6 +652,13 @@ img {
   transform: translateX(4px);
 }
 
+.text-option.hovered {
+  border-color: var(--primary);
+  background: #e8e4ff;
+  transform: translateX(4px);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
+}
+
 .text-option.correct {
   background: #d4edda;
   border-color: var(--success);
@@ -695,6 +702,12 @@ img {
 .flag-option:hover:not(:disabled) {
   border-color: var(--primary);
   transform: scale(1.03);
+}
+
+.flag-option.hovered {
+  border-color: var(--primary);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25);
 }
 
 .flag-option.correct {
