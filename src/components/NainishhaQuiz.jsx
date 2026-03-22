@@ -90,6 +90,14 @@ export default function NainishhaQuiz({ setScore }) {
 
   const TOTAL_QUESTIONS = 10;
 
+  const speakQuestion = (q) => {
+    if (q.mode === 'flag-to-name') {
+      speak('Nainishha, can you say which country this flag belongs to?');
+    } else {
+      speak(`Nainishha, which flag belongs to ${q.answer.name}?`);
+    }
+  };
+
   const nextQuestion = useCallback(() => {
     if (questionNum >= TOTAL_QUESTIONS) {
       setShowSummary(true);
@@ -98,15 +106,19 @@ export default function NainishhaQuiz({ setScore }) {
     setSelected(null);
     setShowResult(false);
     setAnimation('slide-in');
-    setQuestion(generateQuestion(mode));
+    const q = generateQuestion(mode);
+    setQuestion(q);
     setQuestionNum((n) => n + 1);
+    speakQuestion(q);
     setTimeout(() => setAnimation(''), 400);
   }, [mode, questionNum]);
 
   const startQuiz = useCallback((selectedMode) => {
-    setQuestion(generateQuestion(selectedMode));
+    const q = generateQuestion(selectedMode);
+    setQuestion(q);
     setQuestionNum(1);
     setAnimation('slide-in');
+    speakQuestion(q);
     setTimeout(() => setAnimation(''), 400);
   }, []);
 
