@@ -54,6 +54,19 @@ function speak(text) {
   window.speechSynthesis.speak(utterance);
 }
 
+function speakOption(text) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+    voices.find(v => v.lang.startsWith('en'));
+  if (englishVoice) utterance.voice = englishVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -281,6 +294,7 @@ export default function NainishhaQuiz({ setScore }) {
                   key={opt.code}
                   className={`quiz-option text-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   {opt.name}
@@ -302,6 +316,7 @@ export default function NainishhaQuiz({ setScore }) {
                   key={opt.code}
                   className={`quiz-option flag-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   <img src={getFlagUrl(opt.code, 160)} alt="Option" />

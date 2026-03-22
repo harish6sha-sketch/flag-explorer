@@ -16,6 +16,32 @@ const DIFFICULTIES = [
   { id: 3, label: 'Hard', emoji: '🔴', count: 'All flags' },
 ];
 
+function speak(text) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  utterance.pitch = 1.1;
+  utterance.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+    voices.find(v => v.lang.startsWith('en'));
+  if (englishVoice) utterance.voice = englishVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
+function speakOption(text) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female')) ||
+    voices.find(v => v.lang.startsWith('en'));
+  if (englishVoice) utterance.voice = englishVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -83,6 +109,18 @@ export default function Quiz({ setScore, onSelectFlag }) {
 
   const effectiveDifficulty = mode === 'similar-quiz' ? 3 : difficulty;
 
+  const speakQuestion = (q) => {
+    if (q.mode === 'flag-to-name') {
+      speak('Which country does this flag belong to?');
+    } else if (q.mode === 'name-to-flag' || q.mode === 'similar-quiz') {
+      speak(`Which flag belongs to ${q.answer.name}?`);
+    } else if (q.mode === 'colors-quiz') {
+      speak(`Which flag has the colors ${q.answer.colors.join(', ')}?`);
+    } else if (q.mode === 'continent-quiz') {
+      speak('Which continent is this flag from?');
+    }
+  };
+
   const nextQuestion = useCallback(() => {
     if (questionNum >= TOTAL_QUESTIONS) {
       setShowSummary(true);
@@ -91,16 +129,20 @@ export default function Quiz({ setScore, onSelectFlag }) {
     setSelected(null);
     setShowResult(false);
     setAnimation('slide-in');
-    setQuestion(generateQuestion(mode, effectiveDifficulty));
+    const q = generateQuestion(mode, effectiveDifficulty);
+    setQuestion(q);
     setQuestionNum((n) => n + 1);
+    speakQuestion(q);
     setTimeout(() => setAnimation(''), 400);
   }, [mode, effectiveDifficulty, questionNum]);
 
   const startQuiz = useCallback((selectedMode, selectedDifficulty) => {
     const diff = selectedMode === 'similar-quiz' ? 3 : selectedDifficulty;
-    setQuestion(generateQuestion(selectedMode, diff));
+    const q = generateQuestion(selectedMode, diff);
+    setQuestion(q);
     setQuestionNum(1);
     setAnimation('slide-in');
+    speakQuestion(q);
     setTimeout(() => setAnimation(''), 400);
   }, []);
 
@@ -131,6 +173,12 @@ export default function Quiz({ setScore, onSelectFlag }) {
       };
     });
 
+    if (isCorrect) {
+      speak(`${question.answer.name}. Correct! Well done!`);
+    } else {
+      speak(`It was ${question.answer.name}. Try again next time!`);
+    }
+
     setAnimation(isCorrect ? 'correct-bounce' : 'wrong-shake');
 
     timerRef.current = setTimeout(() => {
@@ -139,10 +187,11 @@ export default function Quiz({ setScore, onSelectFlag }) {
       } else {
         nextQuestion();
       }
-    }, 1800);
+    }, 3500);
   };
 
   const resetQuiz = () => {
+    window.speechSynthesis.cancel();
     clearTimeout(timerRef.current);
     setMode(null);
     setDifficulty(null);
@@ -278,6 +327,7 @@ export default function Quiz({ setScore, onSelectFlag }) {
                   key={opt.code}
                   className={`quiz-option text-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   {opt.name}
@@ -299,6 +349,7 @@ export default function Quiz({ setScore, onSelectFlag }) {
                   key={opt.code}
                   className={`quiz-option flag-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   <img src={getFlagUrl(opt.code, 160)} alt={`Option`} />
@@ -330,6 +381,7 @@ export default function Quiz({ setScore, onSelectFlag }) {
                   key={opt.code}
                   className={`quiz-option flag-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   <img src={getFlagUrl(opt.code, 160)} alt="Option" />
@@ -353,6 +405,7 @@ export default function Quiz({ setScore, onSelectFlag }) {
                   key={opt.code}
                   className={`quiz-option flag-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.name)}
                   disabled={showResult}
                 >
                   <img src={getFlagUrl(opt.code, 160)} alt="Option" />
@@ -381,6 +434,7 @@ export default function Quiz({ setScore, onSelectFlag }) {
                   key={opt.continent + i}
                   className={`quiz-option text-option ${getOptionClass(opt)}`}
                   onClick={() => handleAnswer(opt)}
+                  onMouseEnter={() => !showResult && speakOption(opt.continent)}
                   disabled={showResult}
                 >
                   {opt.continent === 'Asia' && '🌏 '}
